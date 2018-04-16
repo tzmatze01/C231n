@@ -85,17 +85,13 @@ class TwoLayerNet(object):
         ############################################################################
 
         # The architecure should be affine - relu - affine - softmax.
+
         W1, b1 = self.params['W1'], self.params['b1']
         W2, b2 = self.params['W2'], self.params['b2']
 
-        N, D = X.shape
-        C = W2.shape[1]
-
-        layer1 = np.dot(X, W1) + b1
-        relu = np.maximum(0, layer1)
-        layer2 = np.dot(relu, W2) + b2
-
-        scores = np.exp(layer2) / np.sum(np.exp(layer2), axis=1, keepDims=True)
+        layer1, cache_layer1 = affine_forward(x, W1, b1)
+        relu, cache_relu = relu_forward(layer1)
+        scores, cache_layer2 = affine_forward(relu, W2, b2)
 
         pass
         ############################################################################
@@ -118,19 +114,22 @@ class TwoLayerNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
 
-        scores[:, y] = 0
+        loss, dx = softmax_loss(scores, y)
+        loss += 0.5 * self.reg * np.sum(W1 * W1) + 0.5 * np.sum(W2 * W2) # L2 loss
 
-        loss = 1 / -np.log(np.sum(scores, axis=1, keepDims=True))
-        loss /= N
-        loss += 0.5 * np.sum(W1 * W1) + 0.5 * np.sum(W2 * W2)
+        dx, dW2, db2 = affine_backward(dx, cache_layer2)
+        dW2 += self.reg * W2
 
-        # TODO use funcitons from layer_utils
-        
-        grads['W1'] = 0
-        grads['b1'] = 0
+        dx = relu_backward(dx, cache_relu)
 
-        grads['W2'] = 0
-        grads['b2'] = 0
+        dx, dW1, db1 = affine_backward(dx, cache_layer1)
+        dW2 += self.reg * W1
+
+        grads['W1'] = dW1
+        grads['b1'] = db1
+
+        grads['W2'] = dW2
+        grads['b2'] = db2
 
         pass
         ############################################################################
@@ -198,6 +197,33 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
+
+
+        # {affine - [batch norm] - relu - [dropout]} x (L - 1) - affine - softmax
+
+        for layer in range(len(hidden_dims) - 1):
+
+            WX = 'W' + str(layer + 1)
+            bX = 'b' + str(layer + 1)
+
+            if layer == 0:
+                self.params[WX] = weight_scale * np.random.rand(input_dim, hidden_dims[layer])
+                self.params[bX] = np.zeros(hidden_dims[layer])
+            elif layer == self.num_layers:
+                self.params[WX] = weight_scale * np.random.rand(hidden_dims[layer], num_classes)
+                self.params[bX] = np.zeros(num_classes)
+            else:
+                self.params[WX] = weight_scale * np.random.rand(hidden_dims[layer-1], hidden_dims[layer])
+                self.params[bX] = np.zeros(hidden_dims[layer])
+
+            if self.use_batchnorm:
+                gammaX = 'gamma' + str(layer + 1)
+                betaX = 'beta' + str(layer + 1)
+                self.params[gammaX] = np.ones(hidden_dims[layer])
+                self.params[betaX] = np.zeros(hidden_dims[layer])
+
+
+
         pass
         ############################################################################
         #                             END OF YOUR CODE                             #
