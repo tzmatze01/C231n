@@ -435,8 +435,7 @@ def conv_forward_naive(x, w, b, conv_param):
         for filter in range(F):
             for height in range(xH):
                 for width in range(xW):
-                    out[image, filter, height, width] =
-                    np.sum(xPad[image, filter, height * stride : height * stride + HH, width * stride : width * stride + WW] * w[filter, :]) + b[filter]
+                    out[image, filter, height, width] = np.sum(xPad[image, filter, height * stride : height * stride + HH, width * stride : width * stride + WW] * w[filter, :]) + b[filter]
 
     pass
     ###########################################################################
